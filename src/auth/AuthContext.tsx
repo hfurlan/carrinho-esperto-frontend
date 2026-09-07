@@ -1,9 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { configureClient } from '../api/client.ts';
 import { getCurrentUser } from '../api/me.ts';
+import type { CurrentUserResponse } from '../api/types.ts';
 import { AuthContext, type AuthStatus, type AuthUser } from './authContext.ts';
 import { refreshTokens, signIn, type CognitoTokens } from './cognito.ts';
+import { readGroups } from './jwt.ts';
 import { clearTokens, loadTokens, saveTokens } from './tokenStore.ts';
+
+function buildUser(me: CurrentUserResponse, accessToken: string | undefined): AuthUser {
+  const groups = readGroups(accessToken);
+  return { subject: me.subject, username: me.username, groups, isAdmin: groups.includes('admin') };
+}
 
 /**
  * Owns the session lifecycle and bridges it to the HTTP client. The client never
@@ -88,7 +95,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const me = await getCurrentUser();
         if (cancelled) return;
-        setUser(me);
+        setUser(buildUser(me, tokensRef.current?.accessToken));
         setStatus('authenticated');
       } catch {
         if (cancelled) return;
@@ -107,7 +114,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const tokens = await signIn(username, password);
       applyTokens(tokens);
       const me = await getCurrentUser();
-      setUser(me);
+      setUser(buildUser(me, tokens.accessToken));
       setStatus('authenticated');
     },
     [applyTokens],

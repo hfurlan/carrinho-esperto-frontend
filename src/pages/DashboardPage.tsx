@@ -1,34 +1,137 @@
-import { useAuth } from '../auth/authContext.ts';
+import { Link } from 'react-router-dom';
+import { getDashboardSpending, getDashboardSummary } from '../api/dashboard.ts';
+import { listFiscalDocuments } from '../api/fiscalDocuments.ts';
+import type { DashboardSpending, DashboardSummary, FiscalDocumentSummaryResponse } from '../api/types.ts';
+import { EmptyState, ErrorState, LoadingState } from '../components/StateViews.tsx';
+import { SpendingBars } from '../components/SpendingBars.tsx';
+import { StatCard } from '../components/StatCard.tsx';
+import { Button, Card, PageHeader } from '../components/ui.tsx';
+import { formatBRL, formatDate, formatInteger } from '../lib/format.ts';
+import { useAsync } from '../lib/useAsync.ts';
 
-/**
- * Placeholder landing page for an authenticated user. Replace with the app's
- * real home screen; this only proves the auth + API wiring end to end.
- */
+interface DashboardData {
+  summary: DashboardSummary;
+  spending: DashboardSpending;
+  recent: FiscalDocumentSummaryResponse[];
+}
+
 export function DashboardPage() {
-  const { user, logout } = useAuth();
+  const { data, error, loading, reload } = useAsync<DashboardData>(
+    async (signal) => {
+      const [summary, spending, recent] = await Promise.all([
+        getDashboardSummary(signal),
+        getDashboardSpending(signal),
+        listFiscalDocuments(signal),
+      ]);
+      return { summary, spending, recent };
+    },
+    [],
+  );
+
+  if (loading) return <LoadingState />;
+  if (error || !data) return <ErrorState error={error} onRetry={reload} />;
+
+  const { summary, spending, recent } = data;
+
+  if (summary.receiptCount === 0) {
+    return (
+      <>
+        <PageHeader title="Início" />
+        <EmptyState
+          icon="🛒"
+          title="Comece importando uma nota fiscal"
+          description={
+            <>
+              O Carrinho Esperto organiza suas compras de supermercado a partir das notas fiscais eletrônicas
+              (NFC-e). Importe a primeira nota para acompanhar seus gastos.
+            </>
+          }
+          action={
+            <Link to="/importar">
+              <Button>Importar nota fiscal</Button>
+            </Link>
+          }
+        />
+      </>
+    );
+  }
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-10">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-slate-900">Carrinho Esperto</h1>
-        <button
-          type="button"
-          onClick={logout}
-          className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
-        >
-          Sair
-        </button>
+    <>
+      <PageHeader
+        title="Início"
+        subtitle="Um resumo dos seus gastos de supermercado."
+        action={
+          <Link to="/importar">
+            <Button>Importar nota</Button>
+          </Link>
+        }
+      />
+
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatCard label="Total gasto" value={formatBRL(summary.totalSpent)} />
+        <StatCard label="Notas" value={formatInteger(summary.receiptCount)} />
+        <StatCard label="Itens" value={formatInteger(summary.itemCount)} />
+        <StatCard
+          label="Identificados"
+          value={formatInteger(summary.resolvedItemCount)}
+          hint={`${formatInteger(summary.unresolvedItemCount)} ainda não identificados`}
+        />
       </div>
 
-      <div className="mt-8 rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-        <p className="text-sm text-slate-600">
-          Autenticado como <strong>{user?.username ?? user?.subject}</strong>.
-        </p>
-        <p className="mt-2 text-sm text-slate-500">
-          Este é o ponto de partida do frontend. Substitua esta página pelo
-          conteúdo real da aplicação.
-        </p>
+      {spending.byMonth.length > 0 && (
+        <Card className="mt-6 p-5">
+          <h2 className="mb-4 text-sm font-semibold text-slate-800">Gastos por mês</h2>
+          <SpendingBars months={spending.byMonth} />
+        </Card>
+      )}
+
+      <div className="mt-6 grid gap-6 lg:grid-cols-2">
+        <Card className="p-5">
+          <h2 className="mb-3 text-sm font-semibold text-slate-800">Por supermercado</h2>
+          {spending.byIssuer.length === 0 ? (
+            <p className="text-sm text-slate-400">Sem dados ainda.</p>
+          ) : (
+            <ul className="divide-y divide-slate-100">
+              {spending.byIssuer.slice(0, 6).map((issuer) => (
+                <li key={issuer.issuerCnpj} className="flex items-center justify-between py-2.5 text-sm">
+                  <span className="truncate pr-3 text-slate-700">{issuer.issuerName}</span>
+                  <span className="shrink-0 font-semibold text-slate-900">{formatBRL(issuer.total)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+
+        <Card className="p-5">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-slate-800">Compras recentes</h2>
+            <Link to="/compras" className="text-xs font-medium text-emerald-700 hover:underline">
+              Ver todas
+            </Link>
+          </div>
+          <ul className="divide-y divide-slate-100">
+            {recent.slice(0, 5).map((doc) => (
+              <li key={doc.id}>
+                <Link
+                  to={`/compras/${doc.id}`}
+                  className="flex items-center justify-between gap-3 py-2.5 text-sm hover:text-emerald-700"
+                >
+                  <span className="min-w-0">
+                    <span className="block truncate font-medium text-slate-800">
+                      {doc.issuerTradeName ?? doc.issuerCnpj}
+                    </span>
+                    <span className="text-xs text-slate-400">
+                      {formatDate(doc.issuedAt)} · {doc.itemCount} {doc.itemCount === 1 ? 'item' : 'itens'}
+                    </span>
+                  </span>
+                  <span className="shrink-0 font-semibold text-slate-900">{formatBRL(doc.totalAmount)}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Card>
       </div>
-    </div>
+    </>
   );
 }

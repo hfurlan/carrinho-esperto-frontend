@@ -13,6 +13,10 @@ export type AuthStatus = 'loading' | 'anonymous' | 'authenticated' | 'expired';
 export interface AuthUser {
   subject: string;
   username: string | null;
+  /** Cognito groups from the access token's `cognito:groups` claim. */
+  groups: string[];
+  /** Convenience: member of the `admin` group. The backend still enforces every admin route. */
+  isAdmin: boolean;
 }
 
 export interface AuthContextValue {
