@@ -47,6 +47,24 @@ describe('request', () => {
     expect(headers.Authorization).toBeUndefined();
   });
 
+  it('sends both the bearer and X-Anon-Session when anonSessionToken is passed (claim)', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ movedReceipts: 1 }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    configureClient({ getToken: () => 'a-token', getAnonToken: () => null });
+
+    await request('/api/anonymous-sessions/claim', { method: 'POST', anonSessionToken: 'anon-xyz' });
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const headers = init.headers as Record<string, string>;
+    expect(headers.Authorization).toBe('Bearer a-token');
+    expect(headers['X-Anon-Session']).toBe('anon-xyz');
+  });
+
   it('prefers the bearer token over the anonymous session header', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ ok: true }), {

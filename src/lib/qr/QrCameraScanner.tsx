@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import { Button } from '../../components/ui.tsx';
 
 /*
  * Live camera QR scanning (M006.1). The camera plumbing is a single injected
@@ -118,15 +117,20 @@ export function QrCameraScanner({
 
   return (
     <div
-      className="rounded-xl border border-slate-200 bg-slate-900 p-3 text-white"
+      className="rounded-xl bg-ink p-3 text-white"
       role="group"
       aria-label="Leitor de QR Code pela câmera"
     >
       <div className="mb-2 flex items-center justify-between">
         <span className="text-sm font-semibold">Ler QR Code</span>
-        <Button variant="ghost" className="text-white hover:bg-white/10" onClick={onClose} aria-label="Fechar leitor">
+        <button
+          type="button"
+          className="rounded-lg px-2.5 py-1 text-sm font-semibold text-white/90 hover:bg-white/10"
+          onClick={onClose}
+          aria-label="Fechar leitor"
+        >
           Fechar
-        </Button>
+        </button>
       </div>
 
       <div className="relative aspect-square w-full overflow-hidden rounded-lg bg-black">
@@ -140,14 +144,14 @@ export function QrCameraScanner({
         />
       </div>
 
-      <p className="mt-2 text-center text-xs text-slate-300" role="status" aria-live="polite">
-        {state === 'requesting' && 'Permita o acesso à câmera para ler o QR Code.'}
-        {state === 'scanning' && 'Aponte a câmera para o QR Code da nota fiscal.'}
+      <p className="mt-2 text-center text-xs text-white/70" role="status" aria-live="polite">
+        {state === 'requesting' && 'Libere o acesso à câmera para ler o QR Code.'}
+        {state === 'scanning' && 'Aponte para o QR Code do cupom.'}
         {state === 'error' && (
           <>
             {ERROR_COPY[errorKind]}
             <br />
-            Use “Enviar foto” ou cole a URL da NFC-e abaixo.
+            Use “Enviar foto do QR Code” ou cole o link abaixo.
           </>
         )}
       </p>

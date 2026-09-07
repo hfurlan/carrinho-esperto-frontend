@@ -24,8 +24,8 @@ describe('AppLayout', () => {
 
   it('shows the trial banner and the create-account CTA for an anonymous session', () => {
     renderApp(<AppLayout />, { auth: fakeTrialAuth() });
-    expect(screen.getByText('Modo teste')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Criar conta para salvar' })).toHaveAttribute('href', '/login');
+    expect(screen.getByText(/Modo teste/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Criar conta' })).toHaveAttribute('href', '/cadastro');
     expect(screen.queryByRole('button', { name: 'Sair' })).not.toBeInTheDocument();
   });
 });

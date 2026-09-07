@@ -9,7 +9,7 @@ describe('LandingPage', () => {
     renderApp(<LandingPage />, { auth: fakeTrialAuth({ anonSession: null }) });
 
     const buttons = screen.getAllByRole('button');
-    expect(buttons[0]).toHaveTextContent('Experimente com sua nota fiscal');
+    expect(buttons[0]).toHaveTextContent('Experimente com sua nota');
     // "Entrar" is present but secondary (a link, not the primary action).
     expect(screen.getByRole('link', { name: 'Entrar' })).toHaveAttribute('href', '/login');
     expect(screen.queryByRole('button', { name: /entrar|criar conta/i })).not.toBeInTheDocument();
@@ -23,7 +23,7 @@ describe('LandingPage', () => {
       auth: fakeTrialAuth({ anonSession: null, startAnonymousSession }),
     });
 
-    await userEvent.click(screen.getByRole('button', { name: 'Experimente com sua nota fiscal' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Experimente com sua nota' }));
 
     await waitFor(() => expect(startAnonymousSession).toHaveBeenCalledOnce());
   });

@@ -22,7 +22,7 @@ export function RootRoute() {
   if (status === 'loading') {
     return (
       <div className="flex min-h-screen items-center justify-center" role="status" aria-label="Carregando">
-        <span className="text-sm text-slate-500">Carregando…</span>
+        <span className="text-sm text-muted">Carregando…</span>
       </div>
     );
   }

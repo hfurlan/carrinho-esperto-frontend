@@ -1,7 +1,10 @@
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from 'react';
 
-/* Small, deliberately un-fancy building blocks for the Carrinho Esperto UI.
-   Emerald is the money/brand accent; slate is the neutral scale. */
+/*
+ * Consumer design system — "cupom & caderno" (M006.2). Warm paper, ink numbers,
+ * one grocery-green accent, hairlines instead of a box around everything. The
+ * admin app does not use these.
+ */
 
 function cx(...parts: (string | false | null | undefined)[]): string {
   return parts.filter(Boolean).join(' ');
@@ -10,10 +13,10 @@ function cx(...parts: (string | false | null | undefined)[]): string {
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 
 const BUTTON_VARIANT: Record<ButtonVariant, string> = {
-  primary: 'bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-emerald-600',
-  secondary: 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50',
-  ghost: 'text-slate-600 hover:bg-slate-100',
-  danger: 'border border-red-300 bg-white text-red-700 hover:bg-red-50',
+  primary: 'bg-accent text-white hover:bg-accent-strong',
+  secondary: 'border border-line bg-card text-ink hover:bg-paper',
+  ghost: 'text-accent hover:bg-accent-soft',
+  danger: 'border border-rose/40 bg-card text-rose hover:bg-rose-soft',
 };
 
 export function Button({
@@ -24,9 +27,8 @@ export function Button({
   return (
     <button
       className={cx(
-        'inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors',
-        'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600',
-        'disabled:cursor-not-allowed disabled:opacity-50',
+        'inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-[15px] font-semibold',
+        'transition-colors disabled:cursor-not-allowed disabled:opacity-45',
         BUTTON_VARIANT[variant],
         className,
       )}
@@ -39,9 +41,9 @@ export function TextInput({ className, ...props }: InputHTMLAttributes<HTMLInput
   return (
     <input
       className={cx(
-        'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm',
-        'placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30',
-        'disabled:bg-slate-50 disabled:text-slate-400',
+        'w-full rounded-lg border border-line bg-card px-3 py-3 text-[15px] text-ink',
+        'placeholder:text-muted/70 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/25',
+        'disabled:bg-paper disabled:text-muted',
         className,
       )}
       {...props}
@@ -49,10 +51,38 @@ export function TextInput({ className, ...props }: InputHTMLAttributes<HTMLInput
   );
 }
 
-export function Card({ className, children }: { className?: string; children: ReactNode }) {
+/** Label + control + hint/error, the standard vertical form unit. */
+export function Field({
+  label,
+  htmlFor,
+  hint,
+  error,
+  children,
+}: {
+  label: string;
+  htmlFor?: string;
+  hint?: ReactNode;
+  error?: ReactNode;
+  children: ReactNode;
+}) {
   return (
-    <div className={cx('rounded-xl border border-slate-200 bg-white shadow-sm', className)}>{children}</div>
+    <div>
+      <label htmlFor={htmlFor} className="mb-1.5 block text-[13px] font-medium text-ink">
+        {label}
+      </label>
+      {children}
+      {error ? (
+        <p className="mt-1.5 text-xs text-rose">{error}</p>
+      ) : hint ? (
+        <p className="mt-1.5 text-xs text-muted">{hint}</p>
+      ) : null}
+    </div>
   );
+}
+
+/** A quiet panel. Not every group needs one — prefer hairline rows. */
+export function Card({ className, children }: { className?: string; children: ReactNode }) {
+  return <div className={cx('rounded-xl border border-line bg-card', className)}>{children}</div>;
 }
 
 export function PageHeader({
@@ -65,31 +95,76 @@ export function PageHeader({
   action?: ReactNode;
 }) {
   return (
-    <header className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <header className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">{title}</h1>
-        {subtitle && <p className="mt-1 text-sm text-slate-500">{subtitle}</p>}
+        <h1 className="font-display text-2xl font-extrabold tracking-tight text-ink text-balance">{title}</h1>
+        {subtitle && <p className="mt-1 text-sm text-muted">{subtitle}</p>}
       </div>
       {action && <div className="shrink-0">{action}</div>}
     </header>
   );
 }
 
+/** A big ink figure with a plain-language label — the "what did I spend" moment. */
+export function Figure({
+  label,
+  value,
+  foot,
+}: {
+  label: ReactNode;
+  value: ReactNode;
+  foot?: ReactNode;
+}) {
+  return (
+    <div>
+      <p className="text-sm text-muted">{label}</p>
+      <p className="mt-0.5 font-display text-[2.75rem] font-extrabold leading-none tracking-tight text-ink tabular-nums">
+        {value}
+      </p>
+      {foot && <p className="mt-2 text-xs text-muted">{foot}</p>}
+    </div>
+  );
+}
+
+type SealTone = 'good' | 'watch' | 'bad' | 'none';
+
+const SEAL_TONE: Record<SealTone, string> = {
+  good: 'border-accent/55 text-accent',
+  watch: 'border-warn/55 text-warn',
+  bad: 'border-rose/55 text-rose',
+  none: 'border-line text-muted',
+};
+
+/** The basket "selo" — a little stamp, the memorable mark on the receipt. */
+export function Seal({ tone = 'none', children }: { tone?: SealTone; children: ReactNode }) {
+  return (
+    <span
+      className={cx(
+        'inline-flex -rotate-1 items-center rounded-md border-2 px-2.5 py-1',
+        'font-display text-xs font-bold uppercase tracking-wide',
+        SEAL_TONE[tone],
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
 type BadgeTone = 'emerald' | 'slate' | 'amber' | 'blue' | 'red';
 
 const BADGE_TONE: Record<BadgeTone, string> = {
-  emerald: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20',
-  slate: 'bg-slate-100 text-slate-600 ring-slate-500/20',
-  amber: 'bg-amber-50 text-amber-700 ring-amber-600/20',
-  blue: 'bg-blue-50 text-blue-700 ring-blue-600/20',
-  red: 'bg-red-50 text-red-700 ring-red-600/20',
+  emerald: 'bg-accent-soft text-accent',
+  slate: 'bg-line/60 text-muted',
+  amber: 'bg-warn-soft text-warn',
+  blue: 'bg-accent-soft text-accent-strong',
+  red: 'bg-rose-soft text-rose',
 };
 
 export function Badge({ tone = 'slate', children }: { tone?: BadgeTone; children: ReactNode }) {
   return (
     <span
       className={cx(
-        'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset',
+        'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold',
         BADGE_TONE[tone],
       )}
     >

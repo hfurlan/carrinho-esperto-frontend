@@ -4,9 +4,9 @@ import { useAuth } from '../auth/authContext.ts';
 import { Button } from '../components/ui.tsx';
 
 const STEPS = [
-  { icon: '📷', title: 'Aponte a câmera', text: 'Leia o QR Code do cupom fiscal — sem digitar nada.' },
-  { icon: '🧾', title: 'Veja a nota', text: 'Estabelecimento, itens e valores organizados na hora.' },
-  { icon: '🥗', title: 'Entenda a compra', text: 'O que foi básico, o que foi supérfluo e uma nota de equilíbrio.' },
+  { n: '1', title: 'Aponte a câmera', text: 'Leia o QR Code do cupom — sem digitar nada.' },
+  { n: '2', title: 'Veja a nota', text: 'Estabelecimento, itens e valores organizados na hora.' },
+  { n: '3', title: 'Entenda a compra', text: 'O que foi básico, o que foi supérfluo e uma nota de equilíbrio.' },
 ];
 
 export function LandingPage() {
@@ -22,64 +22,62 @@ export function LandingPage() {
       await startAnonymousSession();
       navigate('/importar');
     } catch {
-      setError('Não foi possível começar agora. Tente novamente em instantes.');
+      setError('Não deu para começar agora. Tente de novo em instantes.');
       setStarting(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-stone-50">
-      <header className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
+    <div className="min-h-screen bg-paper">
+      <header className="mx-auto flex max-w-2xl items-center justify-between px-5 py-4">
         <div className="flex items-center gap-2">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600 text-base text-white">
+          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-accent text-base text-white">
             🛒
           </span>
-          <span className="text-sm font-bold tracking-tight text-slate-900">Carrinho Esperto</span>
+          <span className="font-display text-sm font-extrabold tracking-tight text-ink">Carrinho Esperto</span>
         </div>
-        <Link to="/login" className="text-sm font-medium text-slate-500 hover:text-slate-800">
+        <Link to="/login" className="text-sm font-medium text-muted hover:text-ink">
           Entrar
         </Link>
       </header>
 
-      <main className="mx-auto max-w-3xl px-4 pb-16 pt-6 sm:pt-12">
-        <h1 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+      <main className="mx-auto max-w-2xl px-5 pb-16 pt-6 sm:pt-14">
+        <h1 className="font-display text-[2rem] font-extrabold leading-[1.1] tracking-tight text-ink text-balance sm:text-4xl">
           Pegue sua nota. Aponte a câmera. Veja o que comprou.
         </h1>
-        <p className="mt-3 max-w-xl text-base text-slate-600">
-          O Carrinho Esperto lê a nota fiscal (NFC-e) do seu supermercado e mostra, na hora, como foi a
-          compra — sem precisar criar conta.
+        <p className="mt-3 max-w-md text-[15px] text-muted">
+          O Carrinho Esperto lê a nota fiscal do seu supermercado e mostra, na hora, como foi a compra. Sem
+          cadastro.
         </p>
 
-        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
-          <Button onClick={onTry} disabled={starting} className="px-5 py-3 text-base">
-            {starting ? 'Preparando…' : 'Experimente com sua nota fiscal'}
+        <div className="mt-6">
+          <Button onClick={onTry} disabled={starting} className="w-full px-5 py-3.5 text-base sm:w-auto">
+            {starting ? 'Preparando…' : 'Experimente com sua nota'}
           </Button>
-          <span className="text-xs text-slate-400">Sem cadastro. Sem senha.</span>
+          <p className="mt-2 text-xs text-muted">Sem cadastro. Sem senha.</p>
         </div>
         {error && (
-          <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
+          <p className="mt-3 rounded-lg border border-rose/40 bg-rose-soft px-3 py-2 text-sm text-rose">{error}</p>
         )}
 
-        <ol className="mt-12 grid gap-4 sm:grid-cols-3">
-          {STEPS.map((step, i) => (
-            <li key={step.title} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 text-lg" aria-hidden>
-                {step.icon}
+        <ol className="mt-12 border-t border-line">
+          {STEPS.map((step) => (
+            <li key={step.n} className="flex gap-4 border-b border-line py-4">
+              <span className="font-display text-sm font-extrabold text-accent">{step.n}</span>
+              <div>
+                <p className="text-[15px] font-semibold text-ink">{step.title}</p>
+                <p className="mt-0.5 text-sm text-muted">{step.text}</p>
               </div>
-              <p className="mt-3 text-sm font-semibold text-slate-900">
-                {i + 1}. {step.title}
-              </p>
-              <p className="mt-1 text-sm text-slate-500">{step.text}</p>
             </li>
           ))}
         </ol>
 
-        <p className="mt-10 text-sm text-slate-500">
-          Quer guardar o histórico e ver relatórios ao longo do tempo?{' '}
-          <Link to="/login" className="font-medium text-emerald-700 hover:underline">
+        <p className="mt-8 text-sm text-muted">
+          Quer guardar o histórico e ver seus gastos ao longo do tempo?{' '}
+          <Link to="/cadastro" className="font-semibold text-accent hover:underline">
             Crie sua conta depois
-          </Link>{' '}
-          — os dados do teste ficam só neste navegador.
+          </Link>
+          . Os dados do teste ficam só neste aparelho.
         </p>
       </main>
     </div>

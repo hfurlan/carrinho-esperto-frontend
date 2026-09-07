@@ -3,11 +3,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as fiscalApi from '../api/fiscalDocuments.ts';
 import * as resolutionApi from '../api/resolution.ts';
 import type { DocumentItemResolution, FiscalDocumentResponse } from '../api/types.ts';
-import { renderApp } from '../test/utils.tsx';
+import { fakeTrialAuth, renderApp } from '../test/utils.tsx';
 import { ReceiptDetailPage } from './ReceiptDetailPage.tsx';
 
 vi.mock('../api/fiscalDocuments.ts', () => ({ getFiscalDocument: vi.fn() }));
 vi.mock('../api/resolution.ts', () => ({ getDocumentResolutions: vi.fn(), resolveDocument: vi.fn() }));
+vi.mock('../api/insight.ts', () => ({ getBasketInsight: vi.fn().mockRejectedValue(new Error('n/a')) }));
 
 const getDoc = fiscalApi.getFiscalDocument as ReturnType<typeof vi.fn>;
 const getResolutions = resolutionApi.getDocumentResolutions as ReturnType<typeof vi.fn>;
@@ -65,9 +66,8 @@ describe('ReceiptDetailPage', () => {
 
     // Fiscal truth — never rewritten.
     expect(await screen.findByText('LEITE UHT 1L ITALAC')).toBeInTheDocument();
-    // Canonical interpretation — shown, clearly labelled, distinct from the fiscal text.
-    expect(screen.getByText('Leite UHT Integral Italac 1L')).toBeInTheDocument();
-    expect(screen.getByText('Produto identificado')).toBeInTheDocument();
+    // Canonical interpretation — shown, distinct from the fiscal text.
+    expect(screen.getByText(/Leite UHT Integral Italac 1L/)).toBeInTheDocument();
     expect(screen.getByText('Cartão de Crédito')).toBeInTheDocument();
   });
 
@@ -78,6 +78,24 @@ describe('ReceiptDetailPage', () => {
 
     renderApp(<ReceiptDetailPage />, { route: '/compras/ghost', path: '/compras/:id' });
 
-    expect(await screen.findByText('Nota não encontrada')).toBeInTheDocument();
+    expect(await screen.findByText('Não achamos esta nota')).toBeInTheDocument();
+  });
+
+  it('invites an anonymous trial to create an account, but not an authenticated user', async () => {
+    getDoc.mockResolvedValue(DOC);
+    getResolutions.mockResolvedValue([]);
+
+    const { unmount } = renderApp(<ReceiptDetailPage />, {
+      route: '/compras/doc-1',
+      path: '/compras/:id',
+      auth: fakeTrialAuth(),
+    });
+    expect(await screen.findByText('Guardar esta compra?')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Criar minha conta' })).toHaveAttribute('href', '/cadastro');
+    unmount();
+
+    renderApp(<ReceiptDetailPage />, { route: '/compras/doc-1', path: '/compras/:id' });
+    await screen.findByText('LEITE UHT 1L ITALAC');
+    expect(screen.queryByText('Guardar esta compra?')).not.toBeInTheDocument();
   });
 });

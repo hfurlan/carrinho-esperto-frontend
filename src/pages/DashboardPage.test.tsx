@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as dashboardApi from '../api/dashboard.ts';
 import * as fiscalApi from '../api/fiscalDocuments.ts';
 import type { DashboardSpending, DashboardSummary, FiscalDocumentSummaryResponse } from '../api/types.ts';
-import { fakeTrialAuth, renderApp } from '../test/utils.tsx';
+import { renderApp } from '../test/utils.tsx';
 import { DashboardPage } from './DashboardPage.tsx';
 
 vi.mock('../api/dashboard.ts', () => ({
@@ -37,7 +37,7 @@ beforeEach(() => {
 });
 
 describe('DashboardPage', () => {
-  it('shows headline numbers and recent purchases from real data', async () => {
+  it('leads with a headline figure and lists recent purchases', async () => {
     summary.mockResolvedValue({
       totalSpent: '328.11',
       receiptCount: 3,
@@ -66,14 +66,14 @@ describe('DashboardPage', () => {
 
     renderApp(<DashboardPage />);
 
-    expect(await screen.findByText('Total gasto')).toBeInTheDocument();
+    expect(await screen.findByText(/Você gastou em setembro/)).toBeInTheDocument();
     expect(screen.getAllByText('R$ 328,11').length).toBeGreaterThan(0);
+    expect(screen.getByText(/3 notas · 22 itens no total/)).toBeInTheDocument();
     expect(screen.getByText('Compras recentes')).toBeInTheDocument();
     expect(screen.getAllByText('Mercado Exemplo').length).toBeGreaterThan(0);
-    expect(screen.getByText('22')).toBeInTheDocument(); // item count stat
   });
 
-  it('shows a polished empty state for a user with no receipts', async () => {
+  it('shows a warm empty state for a user with no receipts', async () => {
     summary.mockResolvedValue({
       totalSpent: '0',
       receiptCount: 0,
@@ -86,25 +86,11 @@ describe('DashboardPage', () => {
 
     renderApp(<DashboardPage />);
 
-    expect(await screen.findByText('Comece importando uma nota fiscal')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /importar nota fiscal/i })).toHaveAttribute('href', '/importar');
-  });
-
-  it('warns an anonymous trial that its data is not being saved', async () => {
-    summary.mockResolvedValue({
-      totalSpent: '0',
-      receiptCount: 0,
-      itemCount: 0,
-      resolvedItemCount: 0,
-      unresolvedItemCount: 0,
-    } satisfies DashboardSummary);
-    spending.mockResolvedValue(EMPTY_SPENDING);
-    list.mockResolvedValue([]);
-
-    renderApp(<DashboardPage />, { auth: fakeTrialAuth() });
-
-    expect(await screen.findByText(/não ficam salvos/)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Criar conta' })).toHaveAttribute('href', '/login');
+    expect(await screen.findByText('Sua primeira compra começa aqui')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /importar minha primeira nota/i })).toHaveAttribute(
+      'href',
+      '/importar',
+    );
   });
 
   it('shows an error state with a retry action when the API fails', async () => {
@@ -114,7 +100,7 @@ describe('DashboardPage', () => {
 
     renderApp(<DashboardPage />);
 
-    expect(await screen.findByText('Algo deu errado')).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByRole('button', { name: /tentar novamente/i })).toBeInTheDocument());
+    expect(await screen.findByText('Deu um problema aqui')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole('button', { name: /tentar de novo/i })).toBeInTheDocument());
   });
 });

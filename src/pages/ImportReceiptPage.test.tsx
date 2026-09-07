@@ -69,7 +69,7 @@ describe('ImportReceiptPage', () => {
     await user.type(screen.getByLabelText('URL da NFC-e'), 'https://example.com/x');
     await user.click(screen.getByRole('button', { name: 'Importar' }));
     expect(
-      await screen.findByText('Por enquanto só há suporte para notas fiscais de São Paulo (SP).'),
+      await screen.findByText('Por enquanto só lemos notas fiscais de São Paulo (SP).'),
     ).toBeInTheDocument();
   });
 
@@ -87,7 +87,7 @@ describe('ImportReceiptPage', () => {
 
     await userEvent.upload(fileInput(), new File(['x'], 'nota.png', { type: 'image/png' }));
 
-    expect(await screen.findByText(/Não reconhecemos um QR Code de nota fiscal/)).toBeInTheDocument();
+    expect(await screen.findByText(/Isso não parece o QR Code de uma nota fiscal/)).toBeInTheDocument();
     expect(importDoc).not.toHaveBeenCalled();
   });
 
@@ -100,7 +100,7 @@ describe('ImportReceiptPage', () => {
     // The client no longer second-guesses the URL — the backend is the authority.
     await waitFor(() => expect(importDoc).toHaveBeenCalledWith('https://example.com/whatever'));
     expect(
-      await screen.findByText('Por enquanto só há suporte para notas fiscais de São Paulo (SP).'),
+      await screen.findByText('Por enquanto só lemos notas fiscais de São Paulo (SP).'),
     ).toBeInTheDocument();
   });
 
@@ -131,7 +131,7 @@ describe('ImportReceiptPage', () => {
     renderApp(<ImportReceiptPage decoder={decoderReturning(SP_URL)} />);
 
     await userEvent.upload(fileInput(), new File(['x'], 'nota.png', { type: 'image/png' }));
-    const retry = await screen.findByRole('button', { name: 'Tentar importar novamente' });
+    const retry = await screen.findByRole('button', { name: 'Tentar importar de novo' });
 
     importDoc.mockResolvedValueOnce({ id: 'doc-3', items: [], payments: [] });
     await userEvent.click(retry);

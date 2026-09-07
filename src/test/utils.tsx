@@ -12,6 +12,10 @@ export function fakeAuth(overrides: Partial<AuthContextValue> = {}): AuthContext
     logout: () => {},
     startAnonymousSession: async () => {},
     endAnonymousSession: () => {},
+    register: async () => {},
+    pendingConfirmation: null,
+    confirmRegistration: async () => {},
+    resendConfirmationCode: async () => {},
     ...overrides,
   };
 }

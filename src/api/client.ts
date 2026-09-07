@@ -75,6 +75,11 @@ interface RequestOptions {
   /** Plain object → JSON body. FormData → sent as-is (multipart upload). */
   body?: unknown;
   signal?: AbortSignal;
+  /**
+   * Send this as `X-Anon-Session` **in addition to** the bearer token — used by
+   * the account claim (M006.2), the one call that needs both credentials.
+   */
+  anonSessionToken?: string;
   /** Internal: set once we have already retried after a refresh. */
   _retried?: boolean;
 }
@@ -152,9 +157,10 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
 
   const headers: Record<string, string> = {};
   const token = hooks.getToken();
-  const anonToken = token ? null : hooks.getAnonToken();
+  const passiveAnon = token || options.anonSessionToken ? null : hooks.getAnonToken();
   if (token) headers.Authorization = `Bearer ${token}`;
-  else if (anonToken) headers['X-Anon-Session'] = anonToken;
+  if (options.anonSessionToken) headers['X-Anon-Session'] = options.anonSessionToken;
+  else if (passiveAnon) headers['X-Anon-Session'] = passiveAnon;
   if (body !== undefined && !isForm) headers['Content-Type'] = 'application/json';
 
   let response: Response;
@@ -183,7 +189,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
         return request<T>(path, { ...options, _retried: true });
       }
       hooks.onSessionExpired();
-    } else if (anonToken) {
+    } else if (passiveAnon) {
       hooks.onAnonInvalid();
     }
   }

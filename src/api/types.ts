@@ -2,7 +2,9 @@
 
 /** GET /api/me */
 export interface CurrentUserResponse {
-  subject: string;
+  /** false for an anonymous trial caller (still authorized, just no identity). */
+  authenticated: boolean;
+  subject: string | null;
   username: string | null;
 }
 

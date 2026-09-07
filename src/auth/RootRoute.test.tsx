@@ -20,18 +20,18 @@ const NO_SESSION = fakeAuth({ status: 'anonymous', user: null, anonSession: null
 describe('consumer routing (M006.1)', () => {
   it('shows the public landing page at / when there is no session', () => {
     renderAt('/', NO_SESSION);
-    expect(screen.getByRole('button', { name: 'Experimente com sua nota fiscal' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Experimente com sua nota' })).toBeInTheDocument();
   });
 
   it('lets an anonymous trial session reach the import page without logging in', () => {
     renderAt('/importar', fakeTrialAuth());
-    expect(screen.getByRole('heading', { name: 'Adicionar nota fiscal' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Adicionar uma nota' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Ler QR Code com a câmera' })).toBeInTheDocument();
   });
 
   it('bounces a sessionless visitor from a deep route back to the landing page', () => {
     renderAt('/importar', NO_SESSION);
-    expect(screen.queryByRole('heading', { name: 'Adicionar nota fiscal' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Experimente com sua nota fiscal' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Adicionar uma nota' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Experimente com sua nota' })).toBeInTheDocument();
   });
 });

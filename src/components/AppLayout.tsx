@@ -7,61 +7,61 @@ const NAV = [
   { to: '/importar', label: 'Importar', icon: '＋', end: false },
 ];
 
-function navClass({ isActive }: { isActive: boolean }): string {
+function topNavClass({ isActive }: { isActive: boolean }): string {
   return [
-    'flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-    isActive ? 'bg-emerald-50 text-emerald-700' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800',
+    'rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors',
+    isActive ? 'bg-accent-soft text-accent' : 'text-muted hover:bg-line/50 hover:text-ink',
   ].join(' ');
 }
 
 function tabClass({ isActive }: { isActive: boolean }): string {
   return [
-    'flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-medium',
-    isActive ? 'text-emerald-700' : 'text-slate-400',
+    'flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-semibold transition-colors',
+    isActive ? 'text-accent' : 'text-muted',
   ].join(' ');
 }
 
-/** Consumer shell: header + primary nav + responsive content. Serves both an
- *  authenticated user and an anonymous trial session (M006.1). */
+/** Consumer shell — warm chrome, simple nav. Serves both an authenticated user
+ *  and an anonymous trial session (M006.1). */
 export function AppLayout() {
   const { user, logout, anonSession } = useAuth();
   const isTrial = !user && !!anonSession;
 
   return (
-    <div className="min-h-screen bg-stone-50 pb-16 sm:pb-0">
-      <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/90 backdrop-blur">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
+    <div className="min-h-screen bg-paper pb-[calc(4rem+env(safe-area-inset-bottom))] sm:pb-0">
+      <header className="sticky top-0 z-10 border-b border-line bg-paper/90 backdrop-blur">
+        <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
           <NavLink to="/" className="flex items-center gap-2">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600 text-base text-white">
+            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-accent text-base text-white">
               🛒
             </span>
-            <span className="text-sm font-bold tracking-tight text-slate-900">Carrinho Esperto</span>
+            <span className="font-display text-sm font-extrabold tracking-tight text-ink">Carrinho Esperto</span>
           </NavLink>
 
           {isTrial ? (
             <Link
-              to="/login"
-              className="rounded-md bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-emerald-700"
+              to="/cadastro"
+              className="rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-white hover:bg-accent-strong"
             >
-              Criar conta para salvar
+              Criar conta
             </Link>
           ) : (
             <div className="flex items-center gap-3">
               {user?.isAdmin && (
                 <NavLink
                   to="/admin"
-                  className="hidden rounded-md border border-slate-300 px-2.5 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50 sm:inline-block"
+                  className="hidden rounded-lg border border-line px-2.5 py-1 text-xs font-semibold text-muted hover:bg-line/40 sm:inline-block"
                 >
                   Admin
                 </NavLink>
               )}
-              <span className="hidden max-w-[12rem] truncate text-xs text-slate-500 sm:inline">
+              <span className="hidden max-w-[12rem] truncate text-xs text-muted sm:inline">
                 {user?.username ?? user?.subject}
               </span>
               <button
                 type="button"
                 onClick={logout}
-                className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                className="rounded-lg border border-line px-2.5 py-1 text-xs font-semibold text-muted hover:bg-line/40"
               >
                 Sair
               </button>
@@ -69,10 +69,9 @@ export function AppLayout() {
           )}
         </div>
 
-        <nav className="mx-auto hidden max-w-5xl gap-1 px-3 pb-2 sm:flex">
+        <nav className="mx-auto hidden max-w-3xl gap-1 px-3 pb-2 sm:flex">
           {NAV.map((item) => (
-            <NavLink key={item.to} to={item.to} end={item.end} className={navClass}>
-              <span aria-hidden>{item.icon}</span>
+            <NavLink key={item.to} to={item.to} end={item.end} className={topNavClass}>
               {item.label}
             </NavLink>
           ))}
@@ -80,17 +79,22 @@ export function AppLayout() {
       </header>
 
       {isTrial && (
-        <p className="mx-auto max-w-5xl px-4 py-2 text-center text-xs text-amber-800 sm:text-left">
-          <span className="rounded bg-amber-100 px-1.5 py-0.5 font-medium">Modo teste</span>{' '}
-          seus dados não são salvos neste dispositivo.
-        </p>
+        <div className="mx-auto max-w-3xl px-4 pt-3">
+          <p className="rounded-lg bg-warn-soft px-3 py-2 text-xs text-warn">
+            <span className="font-semibold">Modo teste.</span> Suas notas não ficam salvas neste aparelho —{' '}
+            <Link to="/cadastro" className="font-semibold underline">
+              crie sua conta
+            </Link>{' '}
+            para guardar.
+          </p>
+        </div>
       )}
 
-      <main className="mx-auto max-w-5xl px-4 py-6">
+      <main className="mx-auto max-w-3xl px-4 py-6">
         <Outlet />
       </main>
 
-      <nav className="fixed inset-x-0 bottom-0 z-10 flex border-t border-slate-200 bg-white sm:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-10 flex border-t border-line bg-card pb-[env(safe-area-inset-bottom)] sm:hidden">
         {NAV.map((item) => (
           <NavLink key={item.to} to={item.to} end={item.end} className={tabClass}>
             <span className="text-base" aria-hidden>

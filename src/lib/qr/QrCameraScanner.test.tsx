@@ -15,7 +15,7 @@ describe('QrCameraScanner', () => {
 
     render(<QrCameraScanner onResult={onResult} onClose={() => {}} start={start} />);
 
-    await screen.findByText('Aponte a câmera para o QR Code da nota fiscal.');
+    await screen.findByText('Aponte para o QR Code do cupom.');
     emit('https://example.com/a');
     emit('https://example.com/b'); // late frame — must be ignored
 
@@ -32,7 +32,7 @@ describe('QrCameraScanner', () => {
     render(<QrCameraScanner onResult={vi.fn()} onClose={() => {}} start={start} />);
 
     expect(await screen.findByText(/Acesso à câmera negado/)).toBeInTheDocument();
-    expect(screen.getByText(/Enviar foto.*cole a URL/s)).toBeInTheDocument();
+    expect(screen.getByText(/Enviar foto do QR Code.*cole o link/s)).toBeInTheDocument();
   });
 
   it('can be closed', async () => {

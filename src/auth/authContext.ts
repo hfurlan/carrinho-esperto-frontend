@@ -19,6 +19,11 @@ export interface AuthUser {
   isAdmin: boolean;
 }
 
+/** A registration awaiting the e-mailed confirmation code (real Cognito path). */
+export interface PendingConfirmation {
+  email: string;
+}
+
 export interface AuthContextValue {
   status: AuthStatus;
   user: AuthUser | null;
@@ -33,6 +38,18 @@ export interface AuthContextValue {
   startAnonymousSession: () => Promise<void>;
   /** Discard the anonymous trial session (also done automatically on login). */
   endAnonymousSession: () => void;
+  /**
+   * Register and sign in (M006.2). On a pool that auto-confirms (local
+   * MiniStack) this authenticates directly; on a real Cognito that needs email
+   * confirmation it resolves with {@link pendingConfirmation} set instead.
+   */
+  register: (email: string, password: string) => Promise<void>;
+  /** Set while a just-registered account still needs its confirmation code. */
+  pendingConfirmation: PendingConfirmation | null;
+  /** Confirm the pending registration with its code, then sign in. */
+  confirmRegistration: (code: string) => Promise<void>;
+  /** Re-send the confirmation code for the pending registration. */
+  resendConfirmationCode: () => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null);

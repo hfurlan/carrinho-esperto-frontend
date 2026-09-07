@@ -13,6 +13,7 @@ import { DashboardPage } from './pages/DashboardPage.tsx';
 import { ImportReceiptPage } from './pages/ImportReceiptPage.tsx';
 import { LoginPage } from './pages/LoginPage.tsx';
 import { NotFoundPage } from './pages/NotFoundPage.tsx';
+import { RegisterPage } from './pages/RegisterPage.tsx';
 import { PurchasesPage } from './pages/PurchasesPage.tsx';
 import { ReceiptDetailPage } from './pages/ReceiptDetailPage.tsx';
 
@@ -20,6 +21,7 @@ export function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/cadastro" element={<RegisterPage />} />
 
       {/* Consumer area — anonymous trial or authenticated (M006.1). RootRoute
           renders the public landing page when there is neither. */}

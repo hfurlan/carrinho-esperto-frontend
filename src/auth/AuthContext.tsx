@@ -1,10 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { createAnonymousSession } from '../api/anonymousSession.ts';
+import { claimAnonymousSession, createAnonymousSession } from '../api/anonymousSession.ts';
 import { configureClient } from '../api/client.ts';
 import { getCurrentUser } from '../api/me.ts';
 import type { CurrentUserResponse } from '../api/types.ts';
-import { AuthContext, type AuthStatus, type AuthUser } from './authContext.ts';
-import { refreshTokens, signIn, type CognitoTokens } from './cognito.ts';
+import { AuthContext, type AuthStatus, type AuthUser, type PendingConfirmation } from './authContext.ts';
+import {
+  CognitoError,
+  confirmSignUp as cognitoConfirmSignUp,
+  refreshTokens,
+  resendConfirmationCode as cognitoResendCode,
+  signIn,
+  signUp,
+  type CognitoTokens,
+} from './cognito.ts';
 import { readGroups } from './jwt.ts';
 import {
   clearAnonToken,
@@ -17,31 +25,32 @@ import {
 
 function buildUser(me: CurrentUserResponse, accessToken: string | undefined): AuthUser {
   const groups = readGroups(accessToken);
-  return { subject: me.subject, username: me.username, groups, isAdmin: groups.includes('admin') };
+  return {
+    subject: me.subject ?? '',
+    username: me.username,
+    groups,
+    isAdmin: groups.includes('admin'),
+  };
 }
 
 /**
- * Owns the session lifecycle and bridges it to the HTTP client. The client never
- * imports React state directly — it receives `getToken` / `getAnonToken` /
- * `refresh` / `onSessionExpired` / `onAnonInvalid` callbacks through
- * `configureClient`, so a 401 anywhere in the app funnels back here.
- *
- * Two kinds of session (M006.1): a Cognito session (persistent, owner-scoped)
- * and an anonymous trial session (browser-scoped, no account). A Cognito session
- * always wins — the anonymous token is dropped the moment one exists.
+ * Owns the session lifecycle and bridges it to the HTTP client (via
+ * `configureClient`). Two kinds of session (M006.1): a Cognito session
+ * (persistent) and an anonymous trial (browser‑scoped). A Cognito session always
+ * wins. On any successful sign‑in / registration the current trial's receipts
+ * are claimed into the account (M006.2) before the trial token is dropped.
  */
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>('loading');
   const [user, setUser] = useState<AuthUser | null>(null);
   const [anonSession, setAnonSession] = useState<{ token: string } | null>(null);
+  const [pendingConfirmation, setPendingConfirmation] = useState<PendingConfirmation | null>(null);
 
-  // Source of truth for the token during a tab's lifetime; localStorage is the
-  // durable mirror. A ref (not state) so the client's synchronous getToken()
-  // always sees the latest value without a re-render race.
   const tokensRef = useRef<CognitoTokens | null>(null);
   const anonTokenRef = useRef<string | null>(null);
   const refreshInFlight = useRef<Promise<string | null> | null>(null);
   const anonStartInFlight = useRef<Promise<void> | null>(null);
+  const pendingCredsRef = useRef<{ email: string; password: string } | null>(null);
 
   const applyTokens = useCallback((next: CognitoTokens | null) => {
     tokensRef.current = next;
@@ -76,7 +85,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (refreshInFlight.current) return refreshInFlight.current;
     const current = tokensRef.current;
     if (!current?.refreshToken) return null;
-
     const attempt = (async () => {
       try {
         const next = await refreshTokens(current.refreshToken as string);
@@ -96,11 +104,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = useCallback(() => {
     applyTokens(null);
     endAnonymousSession();
+    pendingCredsRef.current = null;
+    setPendingConfirmation(null);
     setUser(null);
     setStatus('anonymous');
   }, [applyTokens, endAnonymousSession]);
 
-  // Wire the client exactly once. The callbacks read refs / stable fns.
   useEffect(() => {
     configureClient({
       getToken: () => tokensRef.current?.accessToken ?? null,
@@ -117,13 +126,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   }, [applyTokens, doRefresh, endAnonymousSession]);
 
-  // Restore a persisted session on first mount.
   useEffect(() => {
     let cancelled = false;
     const stored = loadTokens();
 
     if (!stored) {
-      // No Cognito session — an anonymous trial may still be in progress.
       const anon = loadAnonToken();
       if (anon) {
         anonTokenRef.current = anon;
@@ -133,7 +140,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // A Cognito session always wins; drop any stale anonymous token.
     clearAnonToken();
     tokensRef.current = stored;
 
@@ -162,11 +168,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [applyTokens, doRefresh]);
 
-  const login = useCallback(
-    async (username: string, password: string) => {
-      const tokens = await signIn(username, password);
+  /** Finish any successful token grant: claim the trial, load the identity. */
+  const finishAuth = useCallback(
+    async (tokens: CognitoTokens) => {
       applyTokens(tokens);
+      const trialToken = anonTokenRef.current;
+      if (trialToken) {
+        await claimAnonymousSession(trialToken).catch(() => undefined);
+      }
       endAnonymousSession();
+      pendingCredsRef.current = null;
+      setPendingConfirmation(null);
       const me = await getCurrentUser();
       setUser(buildUser(me, tokens.accessToken));
       setStatus('authenticated');
@@ -174,9 +186,72 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [applyTokens, endAnonymousSession],
   );
 
+  const login = useCallback(
+    async (username: string, password: string) => {
+      await finishAuth(await signIn(username, password));
+    },
+    [finishAuth],
+  );
+
+  const register = useCallback(
+    async (email: string, password: string) => {
+      await signUp(email, password);
+      try {
+        await finishAuth(await signIn(email, password));
+      } catch (err) {
+        if (err instanceof CognitoError && err.code === 'UserNotConfirmedException') {
+          pendingCredsRef.current = { email, password };
+          setPendingConfirmation({ email });
+          return;
+        }
+        throw err;
+      }
+    },
+    [finishAuth],
+  );
+
+  const confirmRegistration = useCallback(
+    async (code: string) => {
+      const creds = pendingCredsRef.current;
+      if (!creds) throw new Error('Nenhum cadastro aguardando confirmação.');
+      await cognitoConfirmSignUp(creds.email, code);
+      await finishAuth(await signIn(creds.email, creds.password));
+    },
+    [finishAuth],
+  );
+
+  const resendConfirmationCode = useCallback(async () => {
+    const creds = pendingCredsRef.current;
+    if (creds) await cognitoResendCode(creds.email);
+  }, []);
+
   const value = useMemo(
-    () => ({ status, user, anonSession, login, logout, startAnonymousSession, endAnonymousSession }),
-    [status, user, anonSession, login, logout, startAnonymousSession, endAnonymousSession],
+    () => ({
+      status,
+      user,
+      anonSession,
+      login,
+      logout,
+      startAnonymousSession,
+      endAnonymousSession,
+      register,
+      pendingConfirmation,
+      confirmRegistration,
+      resendConfirmationCode,
+    }),
+    [
+      status,
+      user,
+      anonSession,
+      login,
+      logout,
+      startAnonymousSession,
+      endAnonymousSession,
+      register,
+      pendingConfirmation,
+      confirmRegistration,
+      resendConfirmationCode,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

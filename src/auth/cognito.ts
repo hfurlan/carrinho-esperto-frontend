@@ -60,18 +60,20 @@ async function call(action: string, payload: Record<string, unknown>): Promise<u
     // Only a curated set of codes gets a specific message. Everything else —
     // including any raw AWS/Cognito text in `data.message` — collapses to a
     // generic Portuguese message so provider internals never reach the user.
-    const message =
-      code === 'NotAuthorizedException'
-        ? 'E-mail ou senha inválidos.'
-        : code === 'UserNotFoundException'
-          ? 'Usuário não encontrado.'
-          : code === 'PasswordResetRequiredException'
-            ? 'É necessário redefinir sua senha antes de entrar.'
-            : code === 'UserNotConfirmedException'
-              ? 'Sua conta ainda não foi confirmada.'
-              : code === 'TooManyRequestsException'
-                ? 'Muitas tentativas. Aguarde alguns instantes e tente novamente.'
-                : 'Não foi possível entrar. Tente novamente em alguns instantes.';
+    const messages: Record<string, string> = {
+      NotAuthorizedException: 'E-mail ou senha inválidos.',
+      UserNotFoundException: 'Não achamos uma conta com esse e-mail.',
+      PasswordResetRequiredException: 'É necessário redefinir sua senha antes de entrar.',
+      UserNotConfirmedException: 'Sua conta ainda não foi confirmada.',
+      TooManyRequestsException: 'Muitas tentativas. Aguarde alguns instantes e tente de novo.',
+      LimitExceededException: 'Muitas tentativas. Aguarde alguns instantes e tente de novo.',
+      UsernameExistsException: 'Já existe uma conta com esse e-mail. Tente entrar.',
+      InvalidPasswordException: 'A senha precisa ter ao menos 8 caracteres, com letra e número.',
+      InvalidParameterException: 'Confira o e-mail e a senha e tente de novo.',
+      CodeMismatchException: 'Código incorreto. Confira e digite de novo.',
+      ExpiredCodeException: 'Esse código expirou. Peça um novo e tente de novo.',
+    };
+    const message = messages[code] ?? 'Não foi possível concluir agora. Tente de novo em alguns instantes.';
     throw new CognitoError(code, message);
   }
 
@@ -99,6 +101,35 @@ export async function signIn(username: string, password: string): Promise<Cognit
     throw new CognitoError('ChallengeRequired', 'Este usuário exige uma etapa adicional de login.');
   }
   return toTokens(data.AuthenticationResult);
+}
+
+export interface SignUpResult {
+  /** True when the pool auto-confirms (MiniStack) — the caller can sign in right away. */
+  userConfirmed: boolean;
+}
+
+/** Self-service registration (USER_PASSWORD_AUTH pool, no client secret). */
+export async function signUp(username: string, password: string): Promise<SignUpResult> {
+  const { clientId } = cognitoConfig();
+  const data = (await call('SignUp', {
+    ClientId: clientId,
+    Username: username,
+    Password: password,
+    UserAttributes: [{ Name: 'email', Value: username }],
+  })) as { UserConfirmed?: boolean };
+  return { userConfirmed: data.UserConfirmed === true };
+}
+
+/** Confirm a just-registered account with the e-mailed code (real Cognito path). */
+export async function confirmSignUp(username: string, code: string): Promise<void> {
+  const { clientId } = cognitoConfig();
+  await call('ConfirmSignUp', { ClientId: clientId, Username: username, ConfirmationCode: code });
+}
+
+/** Re-send the confirmation code. */
+export async function resendConfirmationCode(username: string): Promise<void> {
+  const { clientId } = cognitoConfig();
+  await call('ResendConfirmationCode', { ClientId: clientId, Username: username });
 }
 
 export async function refreshTokens(refreshToken: string): Promise<CognitoTokens> {
