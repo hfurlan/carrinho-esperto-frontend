@@ -1,8 +1,8 @@
 import { Route, Routes } from 'react-router-dom';
 import { RequireAdmin } from './auth/RequireAdmin.tsx';
 import { RequireAuth } from './auth/RequireAuth.tsx';
+import { RootRoute } from './auth/RootRoute.tsx';
 import { AdminLayout } from './components/AdminLayout.tsx';
-import { AppLayout } from './components/AppLayout.tsx';
 import { AdminCatalogPage } from './pages/admin/AdminCatalogPage.tsx';
 import { AdminDashboardPage } from './pages/admin/AdminDashboardPage.tsx';
 import { AdminFiscalDocumentDetailPage } from './pages/admin/AdminFiscalDocumentDetailPage.tsx';
@@ -21,17 +21,13 @@ export function App() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
 
-      <Route
-        element={
-          <RequireAuth>
-            <AppLayout />
-          </RequireAuth>
-        }
-      >
-        <Route path="/" element={<DashboardPage />} />
-        <Route path="/importar" element={<ImportReceiptPage />} />
-        <Route path="/compras" element={<PurchasesPage />} />
-        <Route path="/compras/:id" element={<ReceiptDetailPage />} />
+      {/* Consumer area — anonymous trial or authenticated (M006.1). RootRoute
+          renders the public landing page when there is neither. */}
+      <Route path="/" element={<RootRoute />}>
+        <Route index element={<DashboardPage />} />
+        <Route path="importar" element={<ImportReceiptPage />} />
+        <Route path="compras" element={<PurchasesPage />} />
+        <Route path="compras/:id" element={<ReceiptDetailPage />} />
       </Route>
 
       <Route

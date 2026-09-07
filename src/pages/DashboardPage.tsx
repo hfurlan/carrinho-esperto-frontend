@@ -2,6 +2,8 @@ import { Link } from 'react-router-dom';
 import { getDashboardSpending, getDashboardSummary } from '../api/dashboard.ts';
 import { listFiscalDocuments } from '../api/fiscalDocuments.ts';
 import type { DashboardSpending, DashboardSummary, FiscalDocumentSummaryResponse } from '../api/types.ts';
+import { useAuth } from '../auth/authContext.ts';
+import { BasketInsight } from '../components/BasketInsight.tsx';
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews.tsx';
 import { SpendingBars } from '../components/SpendingBars.tsx';
 import { StatCard } from '../components/StatCard.tsx';
@@ -15,7 +17,24 @@ interface DashboardData {
   recent: FiscalDocumentSummaryResponse[];
 }
 
+/** Anonymous trial: make it explicit that these numbers are not being kept. */
+function TrialDashboardNotice() {
+  return (
+    <Card className="mb-6 border-amber-200 bg-amber-50 p-4">
+      <p className="text-sm text-amber-900">
+        Estes números são da sua <strong>sessão de teste</strong> e não ficam salvos. Crie uma conta para
+        montar seu histórico e ver relatórios ao longo do tempo.
+      </p>
+      <Link to="/login" className="mt-2 inline-block text-sm font-semibold text-emerald-700 hover:underline">
+        Criar conta
+      </Link>
+    </Card>
+  );
+}
+
 export function DashboardPage() {
+  const { status, anonSession } = useAuth();
+  const isTrial = status !== 'authenticated' && !!anonSession;
   const { data, error, loading, reload } = useAsync<DashboardData>(
     async (signal) => {
       const [summary, spending, recent] = await Promise.all([
@@ -36,6 +55,7 @@ export function DashboardPage() {
   if (summary.receiptCount === 0) {
     return (
       <>
+        {isTrial && <TrialDashboardNotice />}
         <PageHeader title="Início" />
         <EmptyState
           icon="🛒"
@@ -58,6 +78,7 @@ export function DashboardPage() {
 
   return (
     <>
+      {isTrial && <TrialDashboardNotice />}
       <PageHeader
         title="Início"
         subtitle="Um resumo dos seus gastos de supermercado."
@@ -78,6 +99,12 @@ export function DashboardPage() {
           hint={`${formatInteger(summary.unresolvedItemCount)} ainda não identificados`}
         />
       </div>
+
+      {recent.length > 0 && (
+        <div className="mt-6">
+          <BasketInsight documentId={recent[0].id} />
+        </div>
+      )}
 
       {spending.byMonth.length > 0 && (
         <Card className="mt-6 p-5">

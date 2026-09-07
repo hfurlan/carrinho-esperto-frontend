@@ -39,16 +39,22 @@ export class ApiError extends Error {
 
 interface ClientHooks {
   getToken: () => string | null;
+  /** Anonymous trial session token (M006.1), sent when there is no bearer token. */
+  getAnonToken: () => string | null;
   /** Attempt a token refresh. Resolves to a fresh token or null if it failed. */
   refresh: () => Promise<string | null>;
   /** Called when a request is definitively unauthenticated (refresh failed). */
   onSessionExpired: () => void;
+  /** Called when the anonymous trial session is rejected by the backend (401). */
+  onAnonInvalid: () => void;
 }
 
 let hooks: ClientHooks = {
   getToken: () => null,
+  getAnonToken: () => null,
   refresh: async () => null,
   onSessionExpired: () => {},
+  onAnonInvalid: () => {},
 };
 
 export function configureClient(next: Partial<ClientHooks>): void {
@@ -56,7 +62,12 @@ export function configureClient(next: Partial<ClientHooks>): void {
 }
 
 export function apiBaseUrl(): string {
-  return import.meta.env.VITE_API_BASE_URL?.replace(/\/+$/, '') || DEFAULT_BASE_URL;
+  const configured = import.meta.env.VITE_API_BASE_URL;
+  // Undefined → dev fallback. Explicitly set (including an empty string) → use it
+  // verbatim; empty means "same origin", so requests go to a relative `/api/...`
+  // path (e.g. served through the Vite HTTPS dev proxy).
+  if (configured === undefined) return DEFAULT_BASE_URL;
+  return configured.replace(/\/+$/, '');
 }
 
 interface RequestOptions {
@@ -141,7 +152,9 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
 
   const headers: Record<string, string> = {};
   const token = hooks.getToken();
+  const anonToken = token ? null : hooks.getAnonToken();
   if (token) headers.Authorization = `Bearer ${token}`;
+  else if (anonToken) headers['X-Anon-Session'] = anonToken;
   if (body !== undefined && !isForm) headers['Content-Type'] = 'application/json';
 
   let response: Response;
@@ -161,13 +174,18 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     return (await parseBody(response)) as T;
   }
 
-  // 401 → give the auth layer one chance to refresh, then retry once.
+  // 401 → for a Cognito session, try one refresh then retry; for an anonymous
+  // trial session, the token is simply no longer valid.
   if (response.status === 401 && !options._retried) {
-    const refreshed = await hooks.refresh();
-    if (refreshed) {
-      return request<T>(path, { ...options, _retried: true });
+    if (token) {
+      const refreshed = await hooks.refresh();
+      if (refreshed) {
+        return request<T>(path, { ...options, _retried: true });
+      }
+      hooks.onSessionExpired();
+    } else if (anonToken) {
+      hooks.onAnonInvalid();
     }
-    hooks.onSessionExpired();
   }
 
   const parsed = await parseBody(response);

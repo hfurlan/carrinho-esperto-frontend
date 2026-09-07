@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as dashboardApi from '../api/dashboard.ts';
 import * as fiscalApi from '../api/fiscalDocuments.ts';
 import type { DashboardSpending, DashboardSummary, FiscalDocumentSummaryResponse } from '../api/types.ts';
-import { renderApp } from '../test/utils.tsx';
+import { fakeTrialAuth, renderApp } from '../test/utils.tsx';
 import { DashboardPage } from './DashboardPage.tsx';
 
 vi.mock('../api/dashboard.ts', () => ({
@@ -12,6 +12,18 @@ vi.mock('../api/dashboard.ts', () => ({
 }));
 vi.mock('../api/fiscalDocuments.ts', () => ({
   listFiscalDocuments: vi.fn(),
+}));
+vi.mock('../api/insight.ts', () => ({
+  getBasketInsight: vi.fn().mockResolvedValue({
+    documentId: 'doc-1',
+    seal: 'ATENCAO',
+    sealLabel: 'Atenção',
+    superfluousShare: '0.2',
+    basicShare: '0.3',
+    unclassifiedShare: '0.1',
+    messages: [],
+    categories: [],
+  }),
 }));
 
 const summary = dashboardApi.getDashboardSummary as ReturnType<typeof vi.fn>;
@@ -76,6 +88,23 @@ describe('DashboardPage', () => {
 
     expect(await screen.findByText('Comece importando uma nota fiscal')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /importar nota fiscal/i })).toHaveAttribute('href', '/importar');
+  });
+
+  it('warns an anonymous trial that its data is not being saved', async () => {
+    summary.mockResolvedValue({
+      totalSpent: '0',
+      receiptCount: 0,
+      itemCount: 0,
+      resolvedItemCount: 0,
+      unresolvedItemCount: 0,
+    } satisfies DashboardSummary);
+    spending.mockResolvedValue(EMPTY_SPENDING);
+    list.mockResolvedValue([]);
+
+    renderApp(<DashboardPage />, { auth: fakeTrialAuth() });
+
+    expect(await screen.findByText(/não ficam salvos/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Criar conta' })).toHaveAttribute('href', '/login');
   });
 
   it('shows an error state with a retry action when the API fails', async () => {

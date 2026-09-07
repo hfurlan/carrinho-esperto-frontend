@@ -7,6 +7,7 @@
 import type { CognitoTokens } from './cognito.ts';
 
 const KEY = 'carrinho-esperto.auth';
+const ANON_KEY = 'carrinho-esperto.anon';
 
 export function loadTokens(): CognitoTokens | null {
   try {
@@ -37,6 +38,38 @@ export function saveTokens(tokens: CognitoTokens): void {
 export function clearTokens(): void {
   try {
     localStorage.removeItem(KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+/*
+ * Anonymous trial session token (M006.1). Same browser-only persistence as the
+ * Cognito tokens: it is an opaque bearer credential for this browser's trial
+ * data, nothing more. A future milestone owns account conversion; for now the
+ * data simply lives against this token.
+ */
+
+export function loadAnonToken(): string | null {
+  try {
+    const raw = localStorage.getItem(ANON_KEY);
+    return raw && raw.trim().length > 0 ? raw : null;
+  } catch {
+    return null;
+  }
+}
+
+export function saveAnonToken(token: string): void {
+  try {
+    localStorage.setItem(ANON_KEY, token);
+  } catch {
+    /* private mode / quota — the in-memory copy still works for this tab */
+  }
+}
+
+export function clearAnonToken(): void {
+  try {
+    localStorage.removeItem(ANON_KEY);
   } catch {
     /* ignore */
   }

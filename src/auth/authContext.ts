@@ -22,8 +22,17 @@ export interface AuthUser {
 export interface AuthContextValue {
   status: AuthStatus;
   user: AuthUser | null;
+  /**
+   * Anonymous trial session (M006.1). Non-null when the visitor is trying the
+   * product without an account. Always null while `status === 'authenticated'`.
+   */
+  anonSession: { token: string } | null;
   login: (username: string, password: string) => Promise<void>;
   logout: () => void;
+  /** Start (or reuse) an anonymous trial session. Resolves once it is usable. */
+  startAnonymousSession: () => Promise<void>;
+  /** Discard the anonymous trial session (also done automatically on login). */
+  endAnonymousSession: () => void;
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null);

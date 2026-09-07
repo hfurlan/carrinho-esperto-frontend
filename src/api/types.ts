@@ -108,6 +108,36 @@ export interface DashboardSpending {
   byIssuer: IssuerSpending[];
 }
 
+// ── Basket insight (M006.1) ───────────────────────────────────────────────
+
+export type BasketSeal = 'EQUILIBRADO' | 'ATENCAO' | 'MUITOS_SUPERFLUOS' | 'SEM_DADOS';
+
+export interface BasketCategoryBreakdown {
+  category: string;
+  label: string;
+  itemCount: number;
+  totalValue: string;
+  valueShare: string;
+  superfluous: boolean;
+}
+
+export interface BasketInsightResponse {
+  documentId: string;
+  seal: BasketSeal;
+  sealLabel: string;
+  categories: BasketCategoryBreakdown[];
+  superfluousShare: string;
+  basicShare: string;
+  unclassifiedShare: string;
+  messages: string[];
+}
+
+// ── Anonymous trial (M006.1) ──────────────────────────────────────────────
+
+export interface AnonymousSessionResponse {
+  token: string;
+}
+
 // ── Catalog ───────────────────────────────────────────────────────────────
 
 export interface CatalogProduct {

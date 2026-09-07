@@ -1,4 +1,4 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { Link, NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../auth/authContext.ts';
 
 const NAV = [
@@ -21,9 +21,11 @@ function tabClass({ isActive }: { isActive: boolean }): string {
   ].join(' ');
 }
 
-/** Authenticated consumer shell: header + primary nav + responsive content. */
+/** Consumer shell: header + primary nav + responsive content. Serves both an
+ *  authenticated user and an anonymous trial session (M006.1). */
 export function AppLayout() {
-  const { user, logout } = useAuth();
+  const { user, logout, anonSession } = useAuth();
+  const isTrial = !user && !!anonSession;
 
   return (
     <div className="min-h-screen bg-stone-50 pb-16 sm:pb-0">
@@ -36,26 +38,35 @@ export function AppLayout() {
             <span className="text-sm font-bold tracking-tight text-slate-900">Carrinho Esperto</span>
           </NavLink>
 
-          <div className="flex items-center gap-3">
-            {user?.isAdmin && (
-              <NavLink
-                to="/admin"
-                className="hidden rounded-md border border-slate-300 px-2.5 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50 sm:inline-block"
-              >
-                Admin
-              </NavLink>
-            )}
-            <span className="hidden max-w-[12rem] truncate text-xs text-slate-500 sm:inline">
-              {user?.username ?? user?.subject}
-            </span>
-            <button
-              type="button"
-              onClick={logout}
-              className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+          {isTrial ? (
+            <Link
+              to="/login"
+              className="rounded-md bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-emerald-700"
             >
-              Sair
-            </button>
-          </div>
+              Criar conta para salvar
+            </Link>
+          ) : (
+            <div className="flex items-center gap-3">
+              {user?.isAdmin && (
+                <NavLink
+                  to="/admin"
+                  className="hidden rounded-md border border-slate-300 px-2.5 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50 sm:inline-block"
+                >
+                  Admin
+                </NavLink>
+              )}
+              <span className="hidden max-w-[12rem] truncate text-xs text-slate-500 sm:inline">
+                {user?.username ?? user?.subject}
+              </span>
+              <button
+                type="button"
+                onClick={logout}
+                className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+              >
+                Sair
+              </button>
+            </div>
+          )}
         </div>
 
         <nav className="mx-auto hidden max-w-5xl gap-1 px-3 pb-2 sm:flex">
@@ -67,6 +78,13 @@ export function AppLayout() {
           ))}
         </nav>
       </header>
+
+      {isTrial && (
+        <p className="mx-auto max-w-5xl px-4 py-2 text-center text-xs text-amber-800 sm:text-left">
+          <span className="rounded bg-amber-100 px-1.5 py-0.5 font-medium">Modo teste</span>{' '}
+          seus dados não são salvos neste dispositivo.
+        </p>
+      )}
 
       <main className="mx-auto max-w-5xl px-4 py-6">
         <Outlet />

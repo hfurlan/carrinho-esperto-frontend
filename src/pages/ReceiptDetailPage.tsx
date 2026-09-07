@@ -4,6 +4,8 @@ import { ApiError } from '../api/client.ts';
 import { getFiscalDocument } from '../api/fiscalDocuments.ts';
 import { getDocumentResolutions, resolveDocument } from '../api/resolution.ts';
 import type { DocumentItemResolution, FiscalDocumentResponse, FiscalItemResponse } from '../api/types.ts';
+import { useAuth } from '../auth/authContext.ts';
+import { BasketInsight } from '../components/BasketInsight.tsx';
 import { ResolutionBadge } from '../components/ResolutionBadge.tsx';
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews.tsx';
 import { Badge, Button, Card, PageHeader } from '../components/ui.tsx';
@@ -17,6 +19,8 @@ interface ReceiptData {
 
 export function ReceiptDetailPage() {
   const { id = '' } = useParams();
+  const { anonSession, status } = useAuth();
+  const isTrial = status !== 'authenticated' && !!anonSession;
   const { data, error, loading, reload } = useAsync<ReceiptData>(
     async (signal) => {
       const [document, resolutions] = await Promise.all([
@@ -60,7 +64,11 @@ export function ReceiptDetailPage() {
     return (
       <EmptyState
         title="Nota não encontrada"
-        description="Esta nota não existe ou não pertence à sua conta."
+        description={
+          isTrial
+            ? 'Esta nota não existe ou não pertence a esta sessão de teste.'
+            : 'Esta nota não existe ou não pertence à sua conta.'
+        }
         action={
           <Link to="/compras">
             <Button variant="secondary">Voltar para compras</Button>
@@ -129,6 +137,10 @@ export function ReceiptDetailPage() {
           </div>
         </dl>
       </Card>
+
+      <div className="mt-6">
+        <BasketInsight documentId={document.id} />
+      </div>
 
       <h2 className="mt-8 mb-3 text-sm font-semibold text-slate-800">
         Itens ({document.items.length})

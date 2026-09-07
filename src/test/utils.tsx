@@ -7,10 +7,23 @@ export function fakeAuth(overrides: Partial<AuthContextValue> = {}): AuthContext
   return {
     status: 'authenticated',
     user: { subject: 'sub-1', username: 'dev@carrinho-esperto.local', groups: [], isAdmin: false },
+    anonSession: null,
     login: async () => {},
     logout: () => {},
+    startAnonymousSession: async () => {},
+    endAnonymousSession: () => {},
     ...overrides,
   };
+}
+
+/** An anonymous trial session (no Cognito user). */
+export function fakeTrialAuth(overrides: Partial<AuthContextValue> = {}): AuthContextValue {
+  return fakeAuth({
+    status: 'anonymous',
+    user: null,
+    anonSession: { token: 'trial-token' },
+    ...overrides,
+  });
 }
 
 interface Options {
