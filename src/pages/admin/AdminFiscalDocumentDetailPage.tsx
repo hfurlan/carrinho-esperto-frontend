@@ -1,5 +1,8 @@
+import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { getAdminFiscalDocument } from '../../api/admin.ts';
+import { ApiError } from '../../api/client.ts';
+import { getAdminFiscalDocument, reRunAdminResolution } from '../../api/admin.ts';
+import type { DocumentItemResolution } from '../../api/types.ts';
 import { AdminPageHeader, AdminTable, Td, Th } from '../../components/admin.tsx';
 import { ErrorState, LoadingState } from '../../components/StateViews.tsx';
 import { Card } from '../../components/ui.tsx';
@@ -9,6 +12,23 @@ import { useAsync } from '../../lib/useAsync.ts';
 export function AdminFiscalDocumentDetailPage() {
   const { id = '' } = useParams();
   const { data, error, loading, reload } = useAsync((signal) => getAdminFiscalDocument(id, signal), [id]);
+
+  const [resolutions, setResolutions] = useState<Map<string, DocumentItemResolution> | null>(null);
+  const [reprocessing, setReprocessing] = useState(false);
+  const [reprocessError, setReprocessError] = useState<string | null>(null);
+
+  const reprocess = async () => {
+    setReprocessing(true);
+    setReprocessError(null);
+    try {
+      const rows = await reRunAdminResolution(id);
+      setResolutions(new Map(rows.map((r) => [r.fiscalItemId, r])));
+    } catch (err) {
+      setReprocessError(err instanceof ApiError ? err.message : 'Não foi possível reprocessar.');
+    } finally {
+      setReprocessing(false);
+    }
+  };
 
   if (loading) return <LoadingState />;
   if (error || !data) return <ErrorState error={error} onRetry={reload} />;
@@ -42,7 +62,22 @@ export function AdminFiscalDocumentDetailPage() {
         </dl>
       </Card>
 
-      <h2 className="mb-2 text-sm font-semibold text-slate-800">Itens ({data.items.length})</h2>
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <h2 className="text-sm font-semibold text-slate-800">Itens ({data.items.length})</h2>
+        <button
+          type="button"
+          onClick={() => void reprocess()}
+          disabled={reprocessing}
+          className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40"
+        >
+          {reprocessing ? 'Reprocessando…' : 'Reprocessar identificação'}
+        </button>
+      </div>
+      {reprocessError && (
+        <p className="mb-2 rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800">
+          {reprocessError}
+        </p>
+      )}
       <AdminTable
         head={
           <>
@@ -52,23 +87,30 @@ export function AdminFiscalDocumentDetailPage() {
             <Th>GTIN</Th>
             <Th className="text-right">Qtd.</Th>
             <Th>Un.</Th>
-            <Th className="text-right">Vl. unit.</Th>
             <Th className="text-right">Total</Th>
+            <Th>Resolução</Th>
+            <Th>Método</Th>
+            <Th>Produto canônico</Th>
           </>
         }
       >
-        {data.items.map((item) => (
-          <tr key={item.id}>
-            <Td>{item.lineNumber}</Td>
-            <Td className="font-medium text-slate-900">{item.rawDescription}</Td>
-            <Td className="font-mono text-xs">{item.supplierItemCode ?? '—'}</Td>
-            <Td className="font-mono text-xs">{item.gtin ?? '—'}</Td>
-            <Td className="text-right">{formatQuantity(item.quantity)}</Td>
-            <Td>{item.unit}</Td>
-            <Td className="text-right">{formatBRL(item.unitPrice)}</Td>
-            <Td className="text-right font-medium text-slate-900">{formatBRL(item.totalPrice)}</Td>
-          </tr>
-        ))}
+        {data.items.map((item) => {
+          const r = resolutions?.get(item.id);
+          return (
+            <tr key={item.id}>
+              <Td>{item.lineNumber}</Td>
+              <Td className="font-medium text-slate-900">{item.rawDescription}</Td>
+              <Td className="font-mono text-xs">{item.supplierItemCode ?? '—'}</Td>
+              <Td className="font-mono text-xs">{item.gtin ?? '—'}</Td>
+              <Td className="text-right">{formatQuantity(item.quantity)}</Td>
+              <Td>{item.unit}</Td>
+              <Td className="text-right font-medium text-slate-900">{formatBRL(item.totalPrice)}</Td>
+              <Td>{resolutions ? (r?.status ?? 'UNRESOLVED') : '—'}</Td>
+              <Td className="font-mono text-xs">{r?.method ?? '—'}</Td>
+              <Td>{r?.canonicalProductName ?? '—'}</Td>
+            </tr>
+          );
+        })}
       </AdminTable>
 
       {data.payments.length > 0 && (

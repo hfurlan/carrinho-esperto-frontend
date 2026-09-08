@@ -9,6 +9,7 @@ import { AdminFiscalDocumentDetailPage } from './pages/admin/AdminFiscalDocument
 import { AdminFiscalDocumentsPage } from './pages/admin/AdminFiscalDocumentsPage.tsx';
 import { AdminFiscalItemsPage } from './pages/admin/AdminFiscalItemsPage.tsx';
 import { AdminResolutionsPage } from './pages/admin/AdminResolutionsPage.tsx';
+import { AdminStoreCodesPage } from './pages/admin/AdminStoreCodesPage.tsx';
 import { DashboardPage } from './pages/DashboardPage.tsx';
 import { ImportReceiptPage } from './pages/ImportReceiptPage.tsx';
 import { LoginPage } from './pages/LoginPage.tsx';
@@ -47,6 +48,7 @@ export function App() {
         <Route path="notas-fiscais/:id" element={<AdminFiscalDocumentDetailPage />} />
         <Route path="itens" element={<AdminFiscalItemsPage />} />
         <Route path="resolucoes" element={<AdminResolutionsPage />} />
+        <Route path="vocabulario" element={<AdminStoreCodesPage />} />
         <Route path="catalogo" element={<AdminCatalogPage />} />
       </Route>
 

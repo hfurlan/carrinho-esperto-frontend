@@ -6,6 +6,7 @@ const NAV = [
   { to: '/admin/notas-fiscais', label: 'Notas fiscais', end: false },
   { to: '/admin/itens', label: 'Itens fiscais', end: false },
   { to: '/admin/resolucoes', label: 'Resoluções', end: false },
+  { to: '/admin/vocabulario', label: 'Vocabulário', end: false },
   { to: '/admin/catalogo', label: 'Catálogo', end: false },
 ];
 

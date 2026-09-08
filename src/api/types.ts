@@ -197,6 +197,17 @@ export interface AdminFiscalItemRow {
   canonicalProductId: string | null;
 }
 
+/** A curated (store, cProd) -> product mapping (M007). */
+export interface StoreProductCodeRow {
+  id: string;
+  storeId: string;
+  code: string;
+  canonicalProductId: string;
+  canonicalProductName: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface AdminResolutionRow {
   id: string;
   fiscalItemId: string;
