@@ -1,0 +1,19 @@
+# Build / deps
+node_modules/
+dist/
+coverage/
+
+# Generated local env (never committed — get VITE_COGNITO_CLIENT_ID from the backend repo)
+.env
+.env.local
+
+# TypeScript incremental build cache
+*.tsbuildinfo
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
